@@ -1,0 +1,7 @@
+[Unit]
+Description=Riskline signal engine
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/riskline
+ExecStart=/opt/riskline/.venv/bin/python /opt/riskline/main.py

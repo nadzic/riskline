@@ -1,0 +1,15 @@
+poll_interval_minutes: 30
+alert_cooldown_hours: 6
+
+thresholds:
+  fear_greed_buy: 20
+  fear_greed_sell: 70
+  funding_short_crowded: -0.0001
+  funding_long_crowded: 0.0001
+  trend_risk_off_pct: -1.0
+
+symbols:
+  futures: BTCUSDT
+  spot: BTCUSDT
+
+state_file: .riskline_state.json
