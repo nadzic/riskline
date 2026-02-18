@@ -1,121 +1,136 @@
 # Riskline v1
 
-Lightweight, cron-friendly crypto risk signal engine that combines sentiment and futures context, then sends concise Telegram alerts only when market regime changes.
+Riskline is a scheduled multi-agent signal engine for BTC risk regime monitoring. It combines sentiment (Fear & Greed), trend, and futures positioning signals, then sends Telegram alerts only on meaningful change.
 
-## Why this exists
+## What v1 does
 
-Most crypto signal bots either spam too often or rely on a single indicator. Riskline v1 is built to be practical:
-- combine a few high-signal indicators
-- score market regime
-- send alerts only on meaningful state changes
+- Pulls **CoinMarketCap Fear & Greed**
+- Pulls **Binance spot daily closes** for MA200 trend filter
+- Pulls **Binance futures funding + open interest**
+- Computes a deterministic **0-100 risk score**
+- Maps score to **BUY / HOLD / REDUCE** with practical guidance
+- Sends Telegram alerts only on:
+  - regime flip, or
+  - cooldown expiry (default 6h)
 
-## v1 Signal Stack
+## Agent-style module design
 
-- **CoinMarketCap Fear & Greed** (`/v3/fear-and-greed/latest`)
-- **Binance Futures funding** (`/fapi/v1/premiumIndex`)
-- **Binance Futures open interest** (`/fapi/v1/openInterest`)
-- **BTC trend filter** (200D MA from daily klines)
-- **Optional liquidation proxy** (`/fapi/v1/forceOrders` or volatility/volume proxy)
+- `CollectorAgent`:
+  - `riskline/sources/cmc_fear_greed.py`
+  - `riskline/sources/binance_spot.py`
+  - `riskline/sources/binance_futures.py`
+- `ScoringAgent`:
+  - `riskline/indicators/trend.py`
+  - `riskline/indicators/volatility.py`
+  - `riskline/engine/score.py`
+  - `riskline/engine/decision.py`
+- `StateGuardAgent`:
+  - `riskline/state.py`
+- `NotifierAgent`:
+  - `riskline/engine/format_message.py`
+  - `riskline/notify/telegram.py`
+- `OrchestratorAgent`:
+  - `main.py`
 
-## Decision model (v1)
+## Requirements
 
-Riskline computes a `0-100` score and maps it to an action label:
-- `BUY` (with DCA tranche guidance)
-- `HOLD`
-- `REDUCE`
+- Python 3.9+
+- A CoinMarketCap API key
+- A Telegram bot token and target chat ID
 
-Default thresholds (tunable):
-- F&G BUY-bias when `<= 20`; SELL-bias when `>= 70`
-- Risk-off when BTC is meaningfully below 200D MA
-- Crowded shorts when funding < `-0.01% / 8h`
-- Crowded longs when funding > `+0.01% / 8h`
-
-## Anti-spam behavior
-
-Alerts are sent only when:
-1. market regime flips, or
-2. cooldown expires (default 6h)
-
-A tiny local state file is used to track previous regime and deltas (e.g., OI change).
-
-## Project structure
-
-```
-riskline/
-  README.md
-  requirements.txt
-  .env.example
-  config.yaml
-  main.py
-  riskline/
-    __init__.py
-    config.py
-    state.py
-    sources/
-      __init__.py
-      cmc_fear_greed.py
-      binance_spot.py
-      binance_futures.py
-    indicators/
-      __init__.py
-      trend.py
-      volatility.py
-    engine/
-      __init__.py
-      score.py
-      decision.py
-      format_message.py
-    notify/
-      __init__.py
-      telegram.py
-  scripts/
-    cron_example.txt
-  systemd/
-    riskline.service
-    riskline.timer
-```
-
-## Quick start
-
-1. Clone and enter repo
-2. Create venv and install deps
-3. Copy `.env.example` to `.env` and set secrets
-4. Run once
+## Setup
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-python main.py
 ```
 
-## Environment variables
+Set secrets in `.env`:
 
 - `CMC_API_KEY`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
+- `RISKLINE_DRY_RUN=false` (set `true` to print message instead of sending)
 
-Never commit `.env` or secrets.
+Never commit `.env`.
 
-## Deployment (Hetzner-friendly)
+## Config
 
-Recommended run model is cron/systemd timer every 15-60 minutes depending on API quota.
+Main runtime config is in `config.yaml`:
 
-- cron template: `scripts/cron_example.txt`
-- systemd examples: `systemd/riskline.service`, `systemd/riskline.timer`
+- polling and cooldown
+- scoring thresholds
+- symbols
+- HTTP timeout/retry/backoff
+- optional liquidation proxy toggle
+- state file path
 
-## v1 done criteria
+## Run locally
 
-- Alert triggers on confirmed fear/greed + futures regime
-- No duplicate alerts every run (state-based)
-- One command to run locally and on server
+```bash
+.venv/bin/python main.py
+```
 
-## Roadmap
+Expected behavior:
 
-- **v1.1**: persist daily history, add chart, multi-asset support
-- **v2**: on-chain inputs, portfolio sizing, dashboard
+- fetches all signals once
+- computes score/regime/action
+- checks anti-spam state
+- sends alert if needed (or prints in dry-run)
+- writes `.riskline_state.json`
+
+## Testing
+
+Run all tests:
+
+```bash
+.venv/bin/python -m pytest -q
+```
+
+Test suite includes:
+
+- indicator math
+- score/decision boundaries
+- anti-spam state logic
+- message formatting
+- source parsing with mocked HTTP
+- retry/failure behavior
+- orchestrator end-to-end with mocks
+
+## Deploy on Hetzner
+
+### Option A: cron
+
+Use `scripts/cron_example.txt` as baseline.
+
+### Option B: systemd timer (recommended)
+
+1. Copy `systemd/riskline.service` to `/etc/systemd/system/riskline.service`
+2. Copy `systemd/riskline.timer` to `/etc/systemd/system/riskline.timer`
+3. Adjust paths and user/group
+4. Enable + start:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now riskline.timer
+sudo systemctl status riskline.timer
+```
+
+## Troubleshooting
+
+- **429/rate limits**: increase poll interval and/or retry backoff.
+- **No Telegram messages**: verify bot token, chat ID, and bot permissions in target chat.
+- **No alert on run**: cooldown/regime gate may be blocking duplicates by design.
+- **Config error on startup**: required env variable is missing.
+
+## Security notes
+
+- Keep `CMC_API_KEY` and Telegram token private.
+- Keep bot in private chat/group when possible.
+- Do not commit secrets or state files with sensitive metadata.
 
 ## Disclaimer
 
-Riskline is an educational decision-support tool, not financial advice.
+Riskline is a decision-support tool and not financial advice.

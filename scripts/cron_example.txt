@@ -1,1 +1,1 @@
-*/30 * * * * cd /opt/riskline && /opt/riskline/.venv/bin/python main.py >> /var/log/riskline.log 2>&1
+*/30 * * * * cd /opt/riskline && /opt/riskline/.venv/bin/python /opt/riskline/main.py >> /var/log/riskline.log 2>&1

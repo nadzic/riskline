@@ -1,7 +1,13 @@
 [Unit]
 Description=Riskline signal engine
+After=network-online.target
 
 [Service]
 Type=oneshot
+User=riskline
+Group=riskline
 WorkingDirectory=/opt/riskline
+EnvironmentFile=/opt/riskline/.env
 ExecStart=/opt/riskline/.venv/bin/python /opt/riskline/main.py
+StandardOutput=append:/var/log/riskline.log
+StandardError=append:/var/log/riskline.log
