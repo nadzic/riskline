@@ -1,6 +1,14 @@
+<p align="center">
+  <img src="./riskline_logo.svg" alt="Riskline logo" width="680" />
+</p>
+
 # Riskline
 
 **A BTC risk-regime monitoring engine that combines sentiment, trend, and futures positioning into actionable Telegram alerts.**
+
+Python Requests PyYAML Telegram Binance CoinMarketCap
+
+---
 
 Riskline runs on a schedule (for example with cron or a systemd timer), computes a deterministic 0-100 risk score, maps that score to an action (`BUY` / `HOLD` / `REDUCE`), and sends notifications only when they matter.
 
