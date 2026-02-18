@@ -6,7 +6,14 @@
 
 **A BTC risk-regime monitoring engine that combines sentiment, trend, and futures positioning into actionable Telegram alerts.**
 
-Python Requests PyYAML Telegram Binance CoinMarketCap
+<p>
+  <img alt="python" src="https://img.shields.io/badge/python-3.9+-3776AB?logo=python&logoColor=white" />
+  <img alt="requests" src="https://img.shields.io/badge/requests-HTTP-2CA5E0" />
+  <img alt="PyYAML" src="https://img.shields.io/badge/PyYAML-config-CC0000" />
+  <img alt="telegram" src="https://img.shields.io/badge/Telegram-alerts-26A5E4?logo=telegram&logoColor=white" />
+  <img alt="binance" src="https://img.shields.io/badge/Binance-market_data-F3BA2F?logo=binance&logoColor=black" />
+  <img alt="coinmarketcap" src="https://img.shields.io/badge/CoinMarketCap-sentiment-3861FB" />
+</p>
 
 ---
 
